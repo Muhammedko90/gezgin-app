@@ -603,12 +603,12 @@
                         {/* Input Area (Only visible in planned tab) */}
                         {activeListTab === 'planned' && (
                             <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 mb-6">
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex items-center gap-3">
+                                <div className="flex flex-col gap-3 sm:flex-row">
+                                    <div className="flex items-center gap-3 flex-1">
                                         <div className={`p-2 ${currentTheme.light} dark:bg-opacity-20 rounded-lg ${currentTheme.text}`}><Icons.Plus size={20} /></div>
                                         <input type="text" placeholder="Rota ekle..." className="flex-1 bg-transparent focus:outline-none text-lg placeholder-gray-400 dark:placeholder-gray-500 text-gray-800 dark:text-white" value={newItemText} onChange={(e) => setNewItemText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
                                     </div>
-                                    <div className="flex items-center gap-3 pl-12">
+                                    <div className="flex items-center gap-3 pl-12 sm:pl-0 flex-1">
                                         <Icons.MapPin size={16} className="text-gray-400" />
                                         <input type="text" placeholder="Konum veya Link (Opsiyonel)" className="flex-1 bg-transparent focus:outline-none text-sm placeholder-gray-400 dark:placeholder-gray-500 text-gray-600 dark:text-gray-300" value={newItemLocation} onChange={(e) => setNewItemLocation(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
                                         <button onClick={addItem} disabled={!newItemText.trim() || addingItem} className={`${currentTheme.bg} hover:opacity-90 text-white p-2 rounded-lg transition-colors disabled:opacity-50`}>
