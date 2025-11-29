@@ -34,6 +34,9 @@
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         input { font-size: 16px !important; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .item-image-container { position: relative; width: 100%; height: 140px; overflow: hidden; border-radius: 0.75rem; margin-bottom: 0.75rem; }
+        .item-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+        .item-card:hover .item-image { transform: scale(1.05); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 select-none">
@@ -68,7 +71,8 @@
             Edit: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
             Google: (props) => <svg {...props} viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>,
             Home: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-            List: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+            List: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>,
+            Image: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
         };
 
         const THEMES = {
@@ -82,7 +86,7 @@
 
         function TravelPlanner() {
             const [view, setView] = useState('home');
-            const [homeTab, setHomeTab] = useState('actions'); // 'actions' | 'mylists'
+            const [homeTab, setHomeTab] = useState('actions');
             const [listId, setListId] = useState('');
             const [listData, setListData] = useState({ title: '', items: [], theme: 'emerald', participants: {} });
             const [joinCode, setJoinCode] = useState('');
@@ -95,6 +99,7 @@
             const [history, setHistory] = useState([]);
             const [showSettings, setShowSettings] = useState(false);
             const [editTitle, setEditTitle] = useState('');
+            const [addingItem, setAddingItem] = useState(false);
 
             useEffect(() => {
                 if (!firebase.apps.length) {
@@ -137,7 +142,6 @@
                 let currentHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
                 currentHistory = currentHistory.filter(h => h.id !== id);
                 currentHistory.unshift({ id, title, date: new Date().toISOString() });
-                // Limit yok, tüm listeleri tutalım artık çünkü "Listelerim" oldu
                 localStorage.setItem('travel_history', JSON.stringify(currentHistory));
                 setHistory(currentHistory);
             };
@@ -212,24 +216,50 @@
                 setView('list');
             };
 
+            // Linkten görsel çekme fonksiyonu
+            const fetchMeta = async (url) => {
+                if (!url.startsWith('http')) return null;
+                try {
+                    // Microlink API ile metadata çekiyoruz
+                    const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true`);
+                    const data = await response.json();
+                    return data.data?.image?.url || null;
+                } catch (e) { 
+                    console.log("Görsel çekilemedi", e);
+                    return null; 
+                }
+            };
+
             const addItem = async () => {
                 if (!newItemText.trim()) return;
+                
+                setAddingItem(true);
+                let fetchedImage = null;
+
+                // Eğer link varsa resim çekmeyi dene
+                if (newItemLocation && newItemLocation.startsWith('http')) {
+                    fetchedImage = await fetchMeta(newItemLocation);
+                }
+
                 const newItem = {
                     id: Date.now().toString(),
                     text: newItemText,
                     location: newItemLocation,
+                    image: fetchedImage, // Resmi kaydet
                     completed: false,
                     addedBy: user.uid,
                     addedByName: user.displayName || 'Misafir',
                     addedByPhoto: user.photoURL || null,
                     addedAt: new Date().toISOString()
                 };
+                
                 const updatedItems = [...(listData.items || []), newItem];
                 try {
                     await firebase.firestore().collection('travel_lists').doc(listId).update({ items: updatedItems });
                     setNewItemText('');
                     setNewItemLocation('');
                 } catch (e) { setError("Ekleme hatası: " + e.message); }
+                finally { setAddingItem(false); }
             };
 
             const toggleItem = async (itemId) => {
@@ -254,7 +284,7 @@
             const deleteList = async () => {
                 if(confirm('Bu listeyi tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
                     await firebase.firestore().collection('travel_lists').doc(listId).delete();
-                    removeFromHistory(listId); // Geçmişten de sil
+                    removeFromHistory(listId);
                     exitList();
                 }
             };
@@ -274,7 +304,7 @@
                             [`participants.${user.uid}`]: firebase.firestore.FieldValue.delete()
                         });
                     }
-                    removeFromHistory(listId); // Geçmişten de sil
+                    removeFromHistory(listId);
                     exitList();
                 }
             };
@@ -517,8 +547,10 @@
                                 </div>
                                 <div className="flex items-center gap-3 pl-12">
                                     <Icons.MapPin size={16} className="text-gray-400" />
-                                    <input type="text" placeholder="Konum (Opsiyonel)" className="flex-1 bg-transparent focus:outline-none text-sm placeholder-gray-400 text-gray-600" value={newItemLocation} onChange={(e) => setNewItemLocation(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
-                                    <button onClick={addItem} disabled={!newItemText.trim()} className={`${currentTheme.bg} hover:opacity-90 text-white p-2 rounded-lg transition-colors disabled:opacity-50`}><Icons.ArrowRight size={20} /></button>
+                                    <input type="text" placeholder="Konum veya Link (Opsiyonel)" className="flex-1 bg-transparent focus:outline-none text-sm placeholder-gray-400 text-gray-600" value={newItemLocation} onChange={(e) => setNewItemLocation(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
+                                    <button onClick={addItem} disabled={!newItemText.trim() || addingItem} className={`${currentTheme.bg} hover:opacity-90 text-white p-2 rounded-lg transition-colors disabled:opacity-50`}>
+                                        {addingItem ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Icons.ArrowRight size={20} />}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -529,27 +561,37 @@
                         <div className="space-y-3">
                             {listData.items && listData.items.length > 0 ? (
                                 listData.items.map((item) => (
-                                    <div key={item.id} className={`group bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3 transition-all ${item.completed ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'}`}>
-                                        <button onClick={() => toggleItem(item.id)} className={`mt-1 flex-shrink-0 transition-colors ${item.completed ? currentTheme.text : 'text-gray-300 hover:' + currentTheme.text}`}>
-                                            {item.completed ? <Icons.CheckSquare size={24} /> : <Icons.Square size={24} />}
-                                        </button>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className={`text-lg font-medium truncate ${item.completed ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{item.text}</h3>
-                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                                                {item.location && (
-                                                    <a href={item.location.startsWith('http') ? item.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-500 hover:text-blue-700 hover:underline">
-                                                        <Icons.MapPin size={14} /> <span className="truncate max-w-[150px]">{item.location.startsWith('http') ? 'Harita' : item.location}</span>
-                                                    </a>
-                                                )}
-                                                {item.addedByName && item.addedByName !== 'Misafir' && (
-                                                    <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                                        {item.addedByPhoto && <img src={item.addedByPhoto} className="w-3 h-3 rounded-full" alt="" />}
-                                                        {item.addedByName.split(' ')[0]}
-                                                    </span>
-                                                )}
+                                    <div key={item.id} className={`group bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3 transition-all ${item.completed ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'}`}>
+                                        
+                                        {/* Image Display if exists */}
+                                        {item.image && (
+                                            <div className="item-image-container">
+                                                <img src={item.image} alt={item.text} className="item-image" onError={(e) => e.target.style.display = 'none'} />
                                             </div>
+                                        )}
+
+                                        <div className="flex items-start gap-3">
+                                            <button onClick={() => toggleItem(item.id)} className={`mt-1 flex-shrink-0 transition-colors ${item.completed ? currentTheme.text : 'text-gray-300 hover:' + currentTheme.text}`}>
+                                                {item.completed ? <Icons.CheckSquare size={24} /> : <Icons.Square size={24} />}
+                                            </button>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className={`text-lg font-medium truncate ${item.completed ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{item.text}</h3>
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                                    {item.location && (
+                                                        <a href={item.location.startsWith('http') ? item.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-500 hover:text-blue-700 hover:underline">
+                                                            <Icons.MapPin size={14} /> <span className="truncate max-w-[150px]">{item.location.startsWith('http') ? 'Bağlantıya Git' : item.location}</span>
+                                                        </a>
+                                                    )}
+                                                    {item.addedByName && item.addedByName !== 'Misafir' && (
+                                                        <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                            {item.addedByPhoto && <img src={item.addedByPhoto} className="w-3 h-3 rounded-full" alt="" />}
+                                                            {item.addedByName.split(' ')[0]}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all" title="Sil"><Icons.Trash2 size={18} /></button>
                                         </div>
-                                        <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all" title="Sil"><Icons.Trash2 size={18} /></button>
                                     </div>
                                 ))
                             ) : (
@@ -569,9 +611,7 @@
         
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('SW Başarılı: ', reg.scope))
-                    .catch(err => console.log('SW Hatası: ', err));
+                navigator.serviceWorker.register('./service-worker.js').catch(() => {});
             });
         }
     </script>
