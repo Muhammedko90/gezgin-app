@@ -33,6 +33,10 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         input { font-size: 16px !important; }
+        
+        /* Kaydırma çubuğu düzeni */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 select-none">
@@ -61,6 +65,7 @@
             Map: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>,
             Copy: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
             Trash2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            History: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>,
             Google: (props) => <svg {...props} viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
         };
 
@@ -75,7 +80,9 @@
             const [copySuccess, setCopySuccess] = useState(false);
             const [user, setUser] = useState(null);
             const [isOnline, setIsOnline] = useState(true);
+            const [history, setHistory] = useState([]);
 
+            // BAŞLANGIÇ AYARLARI VE OTOMATİK YÜKLEME
             useEffect(() => {
                 if (!firebase.apps.length) {
                     try {
@@ -87,6 +94,7 @@
                     }
                 }
 
+                // Kullanıcı Durumunu İzle
                 const unsubscribe = firebase.auth().onAuthStateChanged((currentUser) => {
                     if (currentUser) {
                         setUser(currentUser);
@@ -96,14 +104,21 @@
                     }
                 });
 
+                // Geçmiş Listeleri Yükle
+                const savedHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
+                setHistory(savedHistory);
+
+                // SON LİSTEYİ OTOMATİK AÇ (Sayfa yenilenince kaybolmaması için)
                 const lastList = localStorage.getItem('last_travel_list');
-                if (lastList && view === 'home') {
-                    setJoinCode(lastList);
+                if (lastList) {
+                    setListId(lastList);
+                    setView('list'); // Direkt listeye git
                 }
 
                 return () => unsubscribe();
             }, []);
 
+            // LİSTE VERİLERİNİ ÇEKME VE GEÇMİŞE KAYDETME
             useEffect(() => {
                 if (!listId || view !== 'list' || !user) return;
 
@@ -112,24 +127,44 @@
 
                 const unsubscribe = docRef.onSnapshot((docSnap) => {
                     if (docSnap.exists) {
-                        setListData(docSnap.data());
+                        const data = docSnap.data();
+                        setListData(data);
                         setError('');
+
+                        // Başarılı açılan listeyi geçmişe kaydet
+                        addToHistory(listId, data.title);
                     } else {
                         setError('Bu kodla bir liste bulunamadı.');
+                        // Eğer liste silinmişse, otomatik yönlendirmeyi iptal et ki sonsuz döngü olmasın
+                        if (listId === localStorage.getItem('last_travel_list')) {
+                            localStorage.removeItem('last_travel_list');
+                            setView('home');
+                        }
                     }
                 }, (err) => {
                     console.error(err);
-                    setError('Veriye erişilemedi. İnternet bağlantısı yok veya kod yanlış.');
+                    setError('Veriye erişilemedi.');
                 });
 
                 return () => unsubscribe();
             }, [listId, view, user]);
 
+            const addToHistory = (id, title) => {
+                if (!title) return;
+                let currentHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
+                // Aynı ID varsa çıkar (en başa eklemek için)
+                currentHistory = currentHistory.filter(h => h.id !== id);
+                // Başa ekle
+                currentHistory.unshift({ id, title, date: new Date().toISOString() });
+                // Sadece son 5 taneyi tut
+                const newHistory = currentHistory.slice(0, 5);
+                
+                localStorage.setItem('travel_history', JSON.stringify(newHistory));
+                setHistory(newHistory);
+            };
+
             const signInAnonymously = () => {
-                firebase.auth().signInAnonymously().catch((err) => {
-                    // console.error("Anonim giriş hatası:", err); 
-                    // Sessizce geçebiliriz, Google girişi manual yapılacak
-                });
+                firebase.auth().signInAnonymously().catch(() => {});
             };
 
             const signInWithGoogle = () => {
@@ -137,25 +172,25 @@
                 firebase.auth().signInWithPopup(provider)
                     .then(() => setError(""))
                     .catch((error) => {
-                        console.error("Auth Hatası:", error);
-                        
                         if (error.code === 'auth/operation-not-allowed') {
-                            setError("⚠️ HATA: Google Girişi Kapalı! Firebase Console > Build > Authentication > Sign-in method kısmından Google'ı açmalısınız.");
+                            setError("⚠️ Google Girişi Kapalı! Firebase Console'dan açınız.");
                         } else if (error.code === 'auth/unauthorized-domain') {
-                            setError("⚠️ HATA: Domain İzni Yok! Firebase Console > Authentication > Settings > Authorized Domains kısmına 'muhammedko90.github.io' eklemelisiniz. (https:// olmadan!)");
+                            setError("⚠️ Domain İzni Yok! Firebase Console'a 'muhammedko90.github.io' ekleyiniz.");
                         } else {
-                            setError("Giriş Hatası: " + error.message + " (" + error.code + ")");
+                            setError("Giriş Hatası: " + error.message);
                         }
                     });
             };
 
             const logout = () => {
                 firebase.auth().signOut().then(() => {
+                    localStorage.removeItem('last_travel_list'); // Otomatik açmayı durdur
                     setView('home');
                     setListId('');
                 });
             };
 
+            // Diğer Fonksiyonlar (Aynı)
             const generateCode = () => {
                 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
                 let result = '';
@@ -180,14 +215,12 @@
                     localStorage.setItem('last_travel_list', newCode);
                     setNewItemText('');
                     setView('list');
-                } catch (e) {
-                    setError("Oluşturulamadı: " + e.message);
-                }
+                } catch (e) { setError("Oluşturulamadı: " + e.message); }
             };
 
-            const joinList = () => {
-                if (!joinCode.trim()) return;
-                const code = joinCode.toUpperCase().trim();
+            const joinList = (codeOverride) => {
+                const code = (codeOverride || joinCode).toUpperCase().trim();
+                if (!code) return;
                 setListId(code);
                 localStorage.setItem('last_travel_list', code);
                 setView('list');
@@ -230,12 +263,18 @@
                 });
             };
 
+            const exitList = () => {
+                localStorage.removeItem('last_travel_list'); // Çıkış yapınca otomatik açmayı unut
+                setView('home');
+                setListId('');
+            };
+
             if (!user && isOnline) return <div className="flex items-center justify-center h-screen bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div></div>;
 
             if (view === 'home') {
                 return (
-                    <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center font-sans animate-fade-in">
-                        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center font-sans animate-fade-in pb-20">
+                        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
                             <div className="bg-emerald-600 p-8 text-center relative">
                                 {user && !user.isAnonymous ? (
                                     <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -264,11 +303,33 @@
                                     <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2"><Icons.Users className="w-5 h-5 text-blue-600" /> Listeye Katıl</h2>
                                     <div className="flex gap-2">
                                         <input type="text" placeholder="KOD" className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-                                        <button onClick={joinList} disabled={!joinCode.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Katıl</button>
+                                        <button onClick={() => joinList()} disabled={!joinCode.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Katıl</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* GEÇMİŞ LİSTELER (YENİ ÖZELLİK) */}
+                        {history.length > 0 && (
+                            <div className="w-full max-w-md">
+                                <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">SON BAKTIKLARIN</h3>
+                                <div className="space-y-2">
+                                    {history.map((h) => (
+                                        <button key={h.id} onClick={() => joinList(h.id)} className="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-emerald-100 p-2 rounded-lg text-emerald-600"><Icons.History size={18}/></div>
+                                                <div className="text-left">
+                                                    <div className="font-medium text-gray-800">{h.title || 'İsimsiz Liste'}</div>
+                                                    <div className="text-xs text-gray-400 font-mono tracking-wider">{h.id}</div>
+                                                </div>
+                                            </div>
+                                            <Icons.ArrowRight size={16} className="text-gray-300"/>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {error && <div className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100 text-sm max-w-md text-center font-semibold">{error}</div>}
                     </div>
                 );
@@ -283,8 +344,8 @@
                     <div className="bg-emerald-600 text-white pb-24 rounded-b-[2.5rem] shadow-lg sticky top-0 z-10 transition-all pt-safe">
                         <div className="max-w-3xl mx-auto p-6">
                             <div className="flex justify-between items-start mb-6">
-                                <button onClick={() => setView('home')} className="p-2 bg-emerald-700/50 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 text-sm">
-                                    <Icons.LogOut size={16} /> Çıkış
+                                <button onClick={exitList} className="p-2 bg-emerald-700/50 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                                    <Icons.LogOut size={16} /> Listeden Çık
                                 </button>
                                 <div className="flex flex-col items-end">
                                     <span className="text-emerald-200 text-xs mb-1">PAYLAŞ</span>
@@ -311,6 +372,7 @@
                     </div>
 
                     <div className="max-w-3xl mx-auto px-4 -mt-16 pb-10">
+                        {/* İlerleme Çubuğu */}
                         <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 flex items-center gap-4">
                             <div className="flex-1">
                                 <div className="flex justify-between text-sm font-medium mb-2 text-gray-600">
@@ -326,6 +388,7 @@
                             </div>
                         </div>
 
+                        {/* Ekleme Kutusu */}
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 sticky top-24 z-0">
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">
