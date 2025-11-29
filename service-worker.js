@@ -1,6 +1,6 @@
 const CACHE_NAME = 'gezgin-cache-v1';
 const urlsToCache = [
-  './Gezgin.html',
+  './index.html',
   './manifest.json',
   './icon-192.png'
 ];
@@ -16,4 +16,5 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );
+
 });
