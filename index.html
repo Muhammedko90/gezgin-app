@@ -431,17 +431,17 @@
                                         <div className="space-y-8 animate-fade-in">
                                             <div className="space-y-4">
                                                 <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"><Icons.Plus className="w-5 h-5 text-emerald-600" /> Yeni Liste Oluştur</h2>
-                                                <div className="flex gap-2">
-                                                    <input type="text" placeholder="Örn: İtalya" className="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" value={newItemText} onChange={(e) => setNewItemText(e.target.value)} />
-                                                    <button onClick={createList} disabled={!newItemText.trim()} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Oluştur</button>
+                                                <div className="flex flex-col gap-3">
+                                                    <input type="text" placeholder="Örn: İtalya" className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" value={newItemText} onChange={(e) => setNewItemText(e.target.value)} />
+                                                    <button onClick={createList} disabled={!newItemText.trim()} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Oluştur</button>
                                                 </div>
                                             </div>
                                             <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-slate-700"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-slate-800 text-gray-500">veya</span></div></div>
                                             <div className="space-y-4">
                                                 <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"><Icons.Users className="w-5 h-5 text-blue-600" /> Listeye Katıl</h2>
-                                                <div className="flex gap-2">
-                                                    <input type="text" placeholder="KOD" className="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
-                                                    <button onClick={() => joinList()} disabled={!joinCode.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Katıl</button>
+                                                <div className="flex flex-col gap-3">
+                                                    <input type="text" placeholder="KOD" className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                                                    <button onClick={() => joinList()} disabled={!joinCode.trim()} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Katıl</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -648,6 +648,8 @@
                                     )}
 
                                     <div className="flex-1 flex flex-col justify-center min-w-0 gap-2">
+                                        
+                                        {/* Üst Satır: Checkbox + İsim + Sil */}
                                         <div className="flex items-start gap-3">
                                             <button onClick={() => toggleItem(item.id)} className={`flex-shrink-0 transition-colors pt-1 ${item.completed ? currentTheme.text : 'text-gray-300 hover:' + currentTheme.text}`}>
                                                 {item.completed ? <Icons.CheckSquare size={22} /> : <Icons.Square size={22} />}
@@ -660,7 +662,9 @@
                                             <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1"><Icons.Trash2 size={18} /></button>
                                         </div>
 
+                                        {/* Alt Satır: Bağlantıya Git Butonu + Kim Ekledi */}
                                         <div className="flex flex-wrap items-center gap-3 pl-8 sm:pl-0"> 
+                                           
                                            {item.location && (
                                                <a 
                                                  href={item.location.startsWith('http') ? item.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`} 
@@ -671,9 +675,15 @@
                                                    <Icons.MapPin size={14} /> Bağlantıya Git
                                                </a>
                                            )}
-                                           {item.addedByName && (
+
+                                           {item.addedByName && item.addedByName !== 'Misafir' && (
                                                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                                                    {item.addedByPhoto ? <img src={item.addedByPhoto} className="w-5 h-5 rounded-full" /> : <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">{item.addedByName[0]}</div>}
+                                                    {item.addedByPhoto ? (
+                                                        <img src={item.addedByPhoto} className="w-5 h-5 rounded-full border border-gray-200" alt="" />
+                                                    ) : (
+                                                        <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px]">{item.addedByName[0]}</div>
+                                                    )}
+                                                    <span className="truncate max-w-[80px]">{item.addedByName.split(' ')[0]}</span>
                                                 </div>
                                             )}
                                             
