@@ -34,7 +34,6 @@
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         input { font-size: 16px !important; }
         
-        /* Kaydırma çubuğu düzeni */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -152,13 +151,9 @@
             const addToHistory = (id, title) => {
                 if (!title) return;
                 let currentHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
-                // Aynı ID varsa çıkar (en başa eklemek için)
                 currentHistory = currentHistory.filter(h => h.id !== id);
-                // Başa ekle
                 currentHistory.unshift({ id, title, date: new Date().toISOString() });
-                // Sadece son 5 taneyi tut
                 const newHistory = currentHistory.slice(0, 5);
-                
                 localStorage.setItem('travel_history', JSON.stringify(newHistory));
                 setHistory(newHistory);
             };
@@ -184,13 +179,13 @@
 
             const logout = () => {
                 firebase.auth().signOut().then(() => {
-                    localStorage.removeItem('last_travel_list'); // Otomatik açmayı durdur
+                    localStorage.removeItem('last_travel_list');
                     setView('home');
                     setListId('');
                 });
             };
 
-            // Diğer Fonksiyonlar (Aynı)
+            // Diğer Fonksiyonlar
             const generateCode = () => {
                 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
                 let result = '';
@@ -264,7 +259,7 @@
             };
 
             const exitList = () => {
-                localStorage.removeItem('last_travel_list'); // Çıkış yapınca otomatik açmayı unut
+                localStorage.removeItem('last_travel_list');
                 setView('home');
                 setListId('');
             };
@@ -309,7 +304,6 @@
                             </div>
                         </div>
 
-                        {/* GEÇMİŞ LİSTELER (YENİ ÖZELLİK) */}
                         {history.length > 0 && (
                             <div className="w-full max-w-md">
                                 <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">SON BAKTIKLARIN</h3>
@@ -373,18 +367,18 @@
 
                     <div className="max-w-3xl mx-auto px-4 -mt-16 pb-10">
                         {/* İlerleme Çubuğu */}
-                        <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 flex items-center gap-4">
+                        <div className="relative z-20 bg-white p-6 rounded-2xl shadow-xl mb-6 flex items-center gap-4 border-2 border-emerald-100">
                             <div className="flex-1">
-                                <div className="flex justify-between text-sm font-medium mb-2 text-gray-600">
-                                    <span>İlerleme</span>
-                                    <span>%{progress}</span>
+                                <div className="flex justify-between text-base font-bold mb-2 text-gray-700">
+                                    <span>İlerleme Durumu</span>
+                                    <span className="text-emerald-600">% {progress}</span>
                                 </div>
-                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
+                                <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden border border-gray-100">
+                                    <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{ width: `${progress}%` }}></div>
                                 </div>
                             </div>
                             <div className="hidden sm:block">
-                                <div className="h-12 w-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold">{completedCount}/{totalCount}</div>
+                                <div className="h-14 w-14 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg border border-emerald-100">{completedCount}/{totalCount}</div>
                             </div>
                         </div>
 
