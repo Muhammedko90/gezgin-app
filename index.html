@@ -145,10 +145,28 @@
                     try { firebase.initializeApp(firebaseConfig); } catch (e) { setError("Bağlantı ayarları hatalı."); setIsOnline(false); }
                 }
                 const unsubscribe = firebase.auth().onAuthStateChanged((currentUser) => {
-                    if (currentUser) { setUser(currentUser); setError(''); } else { signInAnonymously(); }
+                    if (currentUser) { 
+                        setUser(currentUser); 
+                        setError(''); 
+                        // Cihazlar arası senkronizasyon için Firestore'dan çek
+                        if (!currentUser.isAnonymous) {
+                            const db = firebase.firestore();
+                            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                                if (doc.exists && doc.data().history) {
+                                    setHistory(doc.data().history);
+                                    localStorage.setItem('travel_history', JSON.stringify(doc.data().history));
+                                }
+                            });
+                        }
+                    } else { 
+                        signInAnonymously(); 
+                    }
                 });
+                
+                // Başlangıçta local storage'dan al, sonra Auth tetiklenince üstüne yazar
                 const savedHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
                 setHistory(savedHistory);
+                
                 const lastList = localStorage.getItem('last_travel_list');
                 if (lastList) { setListId(lastList); setView('list'); }
                 return () => unsubscribe();
@@ -164,6 +182,7 @@
                         setListData({ ...data, theme: data.theme || 'emerald', participants: data.participants || {} });
                         setError('');
                         setEditTitle(data.title);
+                        // Listeyi açınca geçmişe ekle
                         addToHistory(listId, data.title);
                     } else {
                         setError('Bu kodla bir liste bulunamadı.');
@@ -176,20 +195,44 @@
                 return () => unsubscribe();
             }, [listId, view, user]);
 
-            const addToHistory = (id, title) => {
+            const addToHistory = async (id, title) => {
                 if (!title) return;
                 let currentHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
+                // Önce listede varsa çıkar (en başa eklemek için)
                 currentHistory = currentHistory.filter(h => h.id !== id);
+                // Başa ekle
                 currentHistory.unshift({ id, title, date: new Date().toISOString() });
+                
+                // Local'e kaydet
                 localStorage.setItem('travel_history', JSON.stringify(currentHistory));
                 setHistory(currentHistory);
+
+                // Eğer kullanıcı giriş yapmışsa Cloud'a da kaydet
+                if (user && !user.isAnonymous) {
+                    try {
+                        await firebase.firestore().collection('users').doc(user.uid).set({
+                            history: currentHistory
+                        }, { merge: true });
+                    } catch (e) {
+                        console.error("Geçmiş kaydedilemedi", e);
+                    }
+                }
             };
 
-            const removeFromHistory = (id) => {
+            const removeFromHistory = async (id) => {
                 let currentHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
                 currentHistory = currentHistory.filter(h => h.id !== id);
+                
                 localStorage.setItem('travel_history', JSON.stringify(currentHistory));
                 setHistory(currentHistory);
+
+                if (user && !user.isAnonymous) {
+                    try {
+                        await firebase.firestore().collection('users').doc(user.uid).set({
+                            history: currentHistory
+                        }, { merge: true });
+                    } catch (e) {}
+                }
             };
 
             const signInAnonymously = () => { firebase.auth().signInAnonymously().catch(() => {}); };
@@ -237,14 +280,16 @@
             const joinList = async (codeOverride) => {
                 const code = (codeOverride || joinCode).toUpperCase().trim();
                 if (!code) return;
+                
                 if (user) {
                     try {
                         const db = firebase.firestore();
                         await db.collection('travel_lists').doc(code).update({
                             [`participants.${user.uid}`]: { name: user.displayName || 'Misafir', photo: user.photoURL }
                         });
-                    } catch (e) { console.log("Katılımcı eklenemedi"); }
+                    } catch (e) { console.log("Katılımcı eklenemedi veya liste yok"); }
                 }
+
                 setListId(code);
                 localStorage.setItem('last_travel_list', code);
                 setView('list');
