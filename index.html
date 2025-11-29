@@ -121,7 +121,9 @@
             const [addingItem, setAddingItem] = useState(false);
             
             // New States
-            const [darkMode, setDarkMode] = useState(false);
+            const [darkMode, setDarkMode] = useState(() => {
+                return localStorage.getItem('theme') === 'dark';
+            });
             const [layout, setLayout] = useState('list'); // 'list' | 'grid'
             const [search, setSearch] = useState('');
             const [activeListTab, setActiveListTab] = useState('planned'); // 'planned' | 'visited'
@@ -135,8 +137,10 @@
             useEffect(() => {
                 if (darkMode) {
                     document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
                 } else {
                     document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
                 }
             }, [darkMode]);
 
