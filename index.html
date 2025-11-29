@@ -32,7 +32,6 @@
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-        /* iOS input zoom engelleme */
         input { font-size: 16px !important; }
     </style>
 </head>
@@ -51,7 +50,6 @@
             appId: "1:120226629154:web:147621c900c5a9f0e06c7b"
         };
 
-        // --- ICONS ---
         const Icons = {
             MapPin: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
             CheckSquare: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
@@ -129,8 +127,8 @@
 
             const signInAnonymously = () => {
                 firebase.auth().signInAnonymously().catch((err) => {
-                    console.error("Anonim giriş hatası:", err);
-                    setError("Giriş yapılamadı.");
+                    // console.error("Anonim giriş hatası:", err); 
+                    // Sessizce geçebiliriz, Google girişi manual yapılacak
                 });
             };
 
@@ -139,10 +137,14 @@
                 firebase.auth().signInWithPopup(provider)
                     .then(() => setError(""))
                     .catch((error) => {
-                        if (error.code === 'auth/operation-not-allowed' || error.message.includes('domain')) {
-                            setError("Domain izni hatası. GitHub kullanıyorsanız Firebase Console'dan domain ekleyin.");
+                        console.error("Auth Hatası:", error);
+                        
+                        if (error.code === 'auth/operation-not-allowed') {
+                            setError("⚠️ HATA: Google Girişi Kapalı! Firebase Console > Build > Authentication > Sign-in method kısmından Google'ı açmalısınız.");
+                        } else if (error.code === 'auth/unauthorized-domain') {
+                            setError("⚠️ HATA: Domain İzni Yok! Firebase Console > Authentication > Settings > Authorized Domains kısmına 'muhammedko90.github.io' eklemelisiniz. (https:// olmadan!)");
                         } else {
-                            setError("Giriş yapılamadı: " + error.message);
+                            setError("Giriş Hatası: " + error.message + " (" + error.code + ")");
                         }
                     });
             };
@@ -267,7 +269,7 @@
                                 </div>
                             </div>
                         </div>
-                        {error && <div className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100 text-sm max-w-md text-center">{error}</div>}
+                        {error && <div className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100 text-sm max-w-md text-center font-semibold">{error}</div>}
                     </div>
                 );
             }
@@ -381,7 +383,6 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<TravelPlanner />);
         
-        // --- SERVICE WORKER KAYDI ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
