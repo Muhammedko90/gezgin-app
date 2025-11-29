@@ -34,9 +34,6 @@
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         input { font-size: 16px !important; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .item-image-container { position: relative; width: 100%; height: 140px; overflow: hidden; border-radius: 0.75rem; margin-bottom: 0.75rem; }
-        .item-image { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-        .item-card:hover .item-image { transform: scale(1.05); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 select-none">
@@ -216,11 +213,9 @@
                 setView('list');
             };
 
-            // Linkten görsel çekme fonksiyonu
             const fetchMeta = async (url) => {
                 if (!url.startsWith('http')) return null;
                 try {
-                    // Microlink API ile metadata çekiyoruz
                     const response = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true`);
                     const data = await response.json();
                     return data.data?.image?.url || null;
@@ -236,7 +231,6 @@
                 setAddingItem(true);
                 let fetchedImage = null;
 
-                // Eğer link varsa resim çekmeyi dene
                 if (newItemLocation && newItemLocation.startsWith('http')) {
                     fetchedImage = await fetchMeta(newItemLocation);
                 }
@@ -245,7 +239,7 @@
                     id: Date.now().toString(),
                     text: newItemText,
                     location: newItemLocation,
-                    image: fetchedImage, // Resmi kaydet
+                    image: fetchedImage,
                     completed: false,
                     addedBy: user.uid,
                     addedByName: user.displayName || 'Misafir',
@@ -561,36 +555,57 @@
                         <div className="space-y-3">
                             {listData.items && listData.items.length > 0 ? (
                                 listData.items.map((item) => (
-                                    <div key={item.id} className={`group bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3 transition-all ${item.completed ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'}`}>
+                                    <div key={item.id} className={`group bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex gap-4 transition-all ${item.completed ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'}`}>
                                         
-                                        {/* Image Display if exists */}
+                                        {/* Görsel Sol Tarafta ve Kare */}
                                         {item.image && (
-                                            <div className="item-image-container">
-                                                <img src={item.image} alt={item.text} className="item-image" onError={(e) => e.target.style.display = 'none'} />
+                                            <div className="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 shadow-inner">
+                                                <img src={item.image} alt={item.text} className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
                                             </div>
                                         )}
 
-                                        <div className="flex items-start gap-3">
-                                            <button onClick={() => toggleItem(item.id)} className={`mt-1 flex-shrink-0 transition-colors ${item.completed ? currentTheme.text : 'text-gray-300 hover:' + currentTheme.text}`}>
-                                                {item.completed ? <Icons.CheckSquare size={24} /> : <Icons.Square size={24} />}
-                                            </button>
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className={`text-lg font-medium truncate ${item.completed ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{item.text}</h3>
-                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-                                                    {item.location && (
-                                                        <a href={item.location.startsWith('http') ? item.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-500 hover:text-blue-700 hover:underline">
-                                                            <Icons.MapPin size={14} /> <span className="truncate max-w-[150px]">{item.location.startsWith('http') ? 'Bağlantıya Git' : item.location}</span>
-                                                        </a>
-                                                    )}
-                                                    {item.addedByName && item.addedByName !== 'Misafir' && (
-                                                        <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                                            {item.addedByPhoto && <img src={item.addedByPhoto} className="w-3 h-3 rounded-full" alt="" />}
-                                                            {item.addedByName.split(' ')[0]}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                        {/* Sağ Taraf: İçerik */}
+                                        <div className="flex-1 flex flex-col justify-center min-w-0 gap-2">
+                                            
+                                            {/* Üst Satır: Checkbox + İsim + Sil */}
+                                            <div className="flex items-start gap-3">
+                                                <button onClick={() => toggleItem(item.id)} className={`flex-shrink-0 transition-colors pt-1 ${item.completed ? currentTheme.text : 'text-gray-300 hover:' + currentTheme.text}`}>
+                                                    {item.completed ? <Icons.CheckSquare size={22} /> : <Icons.Square size={22} />}
+                                                </button>
+                                                
+                                                <h3 className={`text-lg font-bold leading-tight flex-1 ${item.completed ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                                                    {item.text}
+                                                </h3>
+
+                                                <button onClick={() => deleteItem(item.id)} className="text-gray-300 hover:text-red-500 transition-colors p-1"><Icons.Trash2 size={18} /></button>
                                             </div>
-                                            <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all" title="Sil"><Icons.Trash2 size={18} /></button>
+
+                                            {/* Alt Satır: Bağlantıya Git Butonu + Kim Ekledi */}
+                                            <div className="flex flex-wrap items-center gap-3 pl-8 sm:pl-0"> 
+                                               
+                                               {item.location && (
+                                                   <a 
+                                                     href={item.location.startsWith('http') ? item.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`} 
+                                                     target="_blank" 
+                                                     rel="noopener noreferrer"
+                                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${currentTheme.light} ${currentTheme.text} hover:opacity-80 transition-opacity`}
+                                                   >
+                                                       <Icons.MapPin size={14} /> Bağlantıya Git
+                                                   </a>
+                                               )}
+
+                                               {item.addedByName && item.addedByName !== 'Misafir' && (
+                                                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                                                        {item.addedByPhoto ? (
+                                                            <img src={item.addedByPhoto} className="w-5 h-5 rounded-full border border-gray-200" alt="" />
+                                                        ) : (
+                                                            <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-[10px]">{item.addedByName[0]}</div>
+                                                        )}
+                                                        <span className="truncate max-w-[80px]">{item.addedByName.split(' ')[0]}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
                                         </div>
                                     </div>
                                 ))
