@@ -124,7 +124,7 @@
         ];
 
         const getColorForCity = (city) => {
-            if (!city) return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
+            if (!city || city === "Bilinmiyor" || city === "Harita Konumu") return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
             let hash = 0;
             for (let i = 0; i < city.length; i++) hash = city.charCodeAt(i) + ((hash << 5) - hash);
             return CITY_COLORS[Math.abs(hash) % CITY_COLORS.length];
@@ -141,14 +141,27 @@
                 if (!mapInstanceRef.current) {
                     mapInstanceRef.current = L.map(mapRef.current).setView([39.92, 32.85], 5);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(mapInstanceRef.current);
+                    setTimeout(() => { mapInstanceRef.current.invalidateSize(); }, 200);
                 }
                 markersRef.current.forEach(marker => marker.remove());
                 markersRef.current = [];
+                
+                // Özel İkon Ayarı
+                const DefaultIcon = L.icon({
+                    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+                    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34]
+                });
+                
                 const bounds = L.latLngBounds();
                 let hasMarkers = false;
                 items.forEach(item => {
                     if (item.lat && item.lon) {
-                        const marker = L.marker([item.lat, item.lon]).bindPopup(`<b>${item.text}</b><br>${item.city || item.location || ''}`).addTo(mapInstanceRef.current);
+                        const marker = L.marker([item.lat, item.lon], { icon: DefaultIcon })
+                            .bindPopup(`<b>${item.text}</b><br>${item.city || ''}`)
+                            .addTo(mapInstanceRef.current);
                         markersRef.current.push(marker);
                         bounds.extend([item.lat, item.lon]);
                         hasMarkers = true;
@@ -280,16 +293,45 @@
 
             const fetchLocationDetails = async (query) => {
                 if (!query) return { coords: null, city: null };
-                try {
-                    const coordsMatch = query.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-                    if (coordsMatch) {
-                        const lat = parseFloat(coordsMatch[1]);
-                        const lon = parseFloat(coordsMatch[2]);
-                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-                        const data = await response.json();
-                        const city = data.address.city || data.address.town || data.address.province || data.address.state || "Bilinmiyor";
-                        return { coords: { lat, lon }, city };
+                
+                // 1. Google Maps Short Link Handling with Proxy
+                if (query.includes('maps.app.goo.gl') || query.includes('google.com/maps')) {
+                    let lat = null, lon = null;
+                    
+                    // Try direct match first (if it's a long URL)
+                    const directMatch = query.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                    if (directMatch) {
+                        lat = parseFloat(directMatch[1]);
+                        lon = parseFloat(directMatch[2]);
+                    } 
+                    
+                    // If not found and it's a short link, try proxy
+                    if (!lat && query.includes('maps.app.goo.gl')) {
+                        try {
+                            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(query)}`);
+                            const data = await response.json();
+                            if (data.contents) {
+                                const htmlMatch = data.contents.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                                if (htmlMatch) {
+                                    lat = parseFloat(htmlMatch[1]);
+                                    lon = parseFloat(htmlMatch[2]);
+                                }
+                            }
+                        } catch (e) { console.log("Proxy fetch error", e); }
                     }
+
+                    if (lat && lon) {
+                        try {
+                            const reverseRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                            const reverseData = await reverseRes.json();
+                            const city = reverseData.address?.city || reverseData.address?.town || reverseData.address?.province || reverseData.address?.state || "Harita Konumu";
+                            return { coords: { lat, lon }, city };
+                        } catch (e) { return { coords: { lat, lon }, city: "Harita Konumu" }; }
+                    }
+                }
+
+                // 2. Standard Search (Name or Address)
+                try {
                     const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1`);
                     const data = await response.json();
                     if (data && data.length > 0) {
@@ -297,7 +339,7 @@
                         const city = addr.city || addr.town || addr.province || addr.state || "Bilinmiyor";
                         return { coords: { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }, city };
                     }
-                } catch (e) { console.log("Detaylar bulunamadı", e); }
+                } catch (e) { console.log("Search error", e); }
                 return { coords: null, city: null };
             };
 
@@ -307,10 +349,14 @@
                 let fetchedImage = null;
                 let locationDetails = { coords: null, city: null };
 
+                // 1. Try to find location from Link first
                 if (newItemLocation) {
                     if (newItemLocation.startsWith('http')) { fetchedImage = await fetchMeta(newItemLocation); }
-                    locationDetails = await fetchLocationDetails(newItemLocation) || await fetchLocationDetails(newItemText);
-                } else {
+                    locationDetails = await fetchLocationDetails(newItemLocation);
+                }
+                
+                // 2. Fallback: If no coords found from link, try Name
+                if (!locationDetails.coords && !locationDetails.city) {
                     locationDetails = await fetchLocationDetails(newItemText);
                 }
 
