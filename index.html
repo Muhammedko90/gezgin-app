@@ -33,16 +33,14 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         input { font-size: 16px !important; }
-        
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 select-none">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const firebaseConfig = {
             apiKey: "AIzaSyDTn2eXJbEiCnr-nwUlR7P2oDLX-KowCtQ",
@@ -65,13 +63,25 @@
             Copy: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
             Trash2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
             History: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>,
+            Settings: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+            X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+            Edit: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
             Google: (props) => <svg {...props} viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        };
+
+        const THEMES = {
+            emerald: { name: 'Yeşil', bg: 'bg-emerald-600', text: 'text-emerald-600', light: 'bg-emerald-100', from: 'from-emerald-400', to: 'to-emerald-600', shadow: 'shadow-emerald-200' },
+            purple: { name: 'Mor', bg: 'bg-purple-600', text: 'text-purple-600', light: 'bg-purple-100', from: 'from-purple-400', to: 'to-purple-600', shadow: 'shadow-purple-200' },
+            blue: { name: 'Mavi', bg: 'bg-blue-600', text: 'text-blue-600', light: 'bg-blue-100', from: 'from-blue-400', to: 'to-blue-600', shadow: 'shadow-blue-200' },
+            rose: { name: 'Gül', bg: 'bg-rose-600', text: 'text-rose-600', light: 'bg-rose-100', from: 'from-rose-400', to: 'to-rose-600', shadow: 'shadow-rose-200' },
+            amber: { name: 'Turuncu', bg: 'bg-amber-500', text: 'text-amber-600', light: 'bg-amber-100', from: 'from-amber-400', to: 'to-amber-600', shadow: 'shadow-amber-200' },
+            slate: { name: 'Siyah', bg: 'bg-slate-700', text: 'text-slate-700', light: 'bg-slate-200', from: 'from-slate-500', to: 'to-slate-800', shadow: 'shadow-slate-300' }
         };
 
         function TravelPlanner() {
             const [view, setView] = useState('home'); 
             const [listId, setListId] = useState('');
-            const [listData, setListData] = useState({ title: '', items: [] });
+            const [listData, setListData] = useState({ title: '', items: [], theme: 'emerald', participants: {} });
             const [joinCode, setJoinCode] = useState('');
             const [newItemText, setNewItemText] = useState('');
             const [newItemLocation, setNewItemLocation] = useState('');
@@ -80,71 +90,42 @@
             const [user, setUser] = useState(null);
             const [isOnline, setIsOnline] = useState(true);
             const [history, setHistory] = useState([]);
+            const [showSettings, setShowSettings] = useState(false);
+            const [editTitle, setEditTitle] = useState('');
 
-            // BAŞLANGIÇ AYARLARI VE OTOMATİK YÜKLEME
             useEffect(() => {
                 if (!firebase.apps.length) {
-                    try {
-                        firebase.initializeApp(firebaseConfig);
-                    } catch (e) {
-                        console.error("Firebase init hatası:", e);
-                        setError("Bağlantı ayarları hatalı.");
-                        setIsOnline(false);
-                    }
+                    try { firebase.initializeApp(firebaseConfig); } catch (e) { setError("Bağlantı ayarları hatalı."); setIsOnline(false); }
                 }
-
-                // Kullanıcı Durumunu İzle
                 const unsubscribe = firebase.auth().onAuthStateChanged((currentUser) => {
-                    if (currentUser) {
-                        setUser(currentUser);
-                        setError('');
-                    } else {
-                        signInAnonymously();
-                    }
+                    if (currentUser) { setUser(currentUser); setError(''); } else { signInAnonymously(); }
                 });
-
-                // Geçmiş Listeleri Yükle
                 const savedHistory = JSON.parse(localStorage.getItem('travel_history') || '[]');
                 setHistory(savedHistory);
-
-                // SON LİSTEYİ OTOMATİK AÇ (Sayfa yenilenince kaybolmaması için)
                 const lastList = localStorage.getItem('last_travel_list');
-                if (lastList) {
-                    setListId(lastList);
-                    setView('list'); // Direkt listeye git
-                }
-
+                if (lastList) { setListId(lastList); setView('list'); }
                 return () => unsubscribe();
             }, []);
 
-            // LİSTE VERİLERİNİ ÇEKME VE GEÇMİŞE KAYDETME
             useEffect(() => {
                 if (!listId || view !== 'list' || !user) return;
-
                 const db = firebase.firestore();
                 const docRef = db.collection('travel_lists').doc(listId);
-
                 const unsubscribe = docRef.onSnapshot((docSnap) => {
                     if (docSnap.exists) {
                         const data = docSnap.data();
-                        setListData(data);
+                        setListData({ ...data, theme: data.theme || 'emerald', participants: data.participants || {} });
                         setError('');
-
-                        // Başarılı açılan listeyi geçmişe kaydet
+                        setEditTitle(data.title);
                         addToHistory(listId, data.title);
                     } else {
                         setError('Bu kodla bir liste bulunamadı.');
-                        // Eğer liste silinmişse, otomatik yönlendirmeyi iptal et ki sonsuz döngü olmasın
                         if (listId === localStorage.getItem('last_travel_list')) {
                             localStorage.removeItem('last_travel_list');
                             setView('home');
                         }
                     }
-                }, (err) => {
-                    console.error(err);
-                    setError('Veriye erişilemedi.');
-                });
-
+                }, (err) => { console.error(err); setError('Veriye erişilemedi.'); });
                 return () => unsubscribe();
             }, [listId, view, user]);
 
@@ -158,40 +139,23 @@
                 setHistory(newHistory);
             };
 
-            const signInAnonymously = () => {
-                firebase.auth().signInAnonymously().catch(() => {});
-            };
-
+            const signInAnonymously = () => { firebase.auth().signInAnonymously().catch(() => {}); };
             const signInWithGoogle = () => {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 firebase.auth().signInWithPopup(provider)
                     .then(() => setError(""))
                     .catch((error) => {
-                        if (error.code === 'auth/operation-not-allowed') {
-                            setError("⚠️ Google Girişi Kapalı! Firebase Console'dan açınız.");
-                        } else if (error.code === 'auth/unauthorized-domain') {
-                            setError("⚠️ Domain İzni Yok! Firebase Console'a 'muhammedko90.github.io' ekleyiniz.");
-                        } else {
-                            setError("Giriş Hatası: " + error.message);
-                        }
+                       setError("Giriş Hatası: " + error.message);
                     });
             };
-
             const logout = () => {
-                firebase.auth().signOut().then(() => {
-                    localStorage.removeItem('last_travel_list');
-                    setView('home');
-                    setListId('');
-                });
+                firebase.auth().signOut().then(() => { localStorage.removeItem('last_travel_list'); setView('home'); setListId(''); });
             };
 
-            // Diğer Fonksiyonlar
             const generateCode = () => {
                 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
                 let result = '';
-                for (let i = 0; i < 6; i++) {
-                    result += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
+                for (let i = 0; i < 6; i++) { result += chars.charAt(Math.floor(Math.random() * chars.length)); }
                 return result;
             };
 
@@ -202,6 +166,10 @@
                     title: newItemText,
                     createdAt: new Date().toISOString(),
                     createdBy: user ? user.uid : 'anonymous',
+                    theme: 'emerald',
+                    participants: {
+                        [user.uid]: { name: user.displayName || 'Yönetici', photo: user.photoURL }
+                    },
                     items: []
                 };
                 try {
@@ -213,9 +181,23 @@
                 } catch (e) { setError("Oluşturulamadı: " + e.message); }
             };
 
-            const joinList = (codeOverride) => {
+            const joinList = async (codeOverride) => {
                 const code = (codeOverride || joinCode).toUpperCase().trim();
                 if (!code) return;
+                
+                // Katılımcı olarak ekle
+                if (user) {
+                    try {
+                        const db = firebase.firestore();
+                        await db.collection('travel_lists').doc(code).update({
+                            [`participants.${user.uid}`]: { 
+                                name: user.displayName || 'Misafir', 
+                                photo: user.photoURL 
+                            }
+                        });
+                    } catch (e) { console.log("Katılımcı eklenemedi veya liste yok"); }
+                }
+
                 setListId(code);
                 localStorage.setItem('last_travel_list', code);
                 setView('list');
@@ -251,6 +233,42 @@
                 await firebase.firestore().collection('travel_lists').doc(listId).update({ items: updatedItems });
             };
 
+            // --- YENİ ÖZELLİK FONKSİYONLARI ---
+            const updateListTitle = async () => {
+                if(!editTitle.trim()) return;
+                await firebase.firestore().collection('travel_lists').doc(listId).update({ title: editTitle });
+            };
+
+            const changeTheme = async (themeKey) => {
+                await firebase.firestore().collection('travel_lists').doc(listId).update({ theme: themeKey });
+            };
+
+            const deleteList = async () => {
+                if(confirm('Bu listeyi tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) {
+                    await firebase.firestore().collection('travel_lists').doc(listId).delete();
+                    exitList();
+                }
+            };
+
+            const removeParticipant = async (uid) => {
+                if(confirm('Bu kişiyi listeden çıkarmak istiyor musunuz?')) {
+                     await firebase.firestore().collection('travel_lists').doc(listId).update({
+                        [`participants.${uid}`]: firebase.firestore.FieldValue.delete()
+                    });
+                }
+            };
+
+            const leaveList = async () => {
+                if(confirm('Bu listeden ayrılmak istiyor musunuz?')) {
+                    if (user && listData.participants[user.uid]) {
+                        await firebase.firestore().collection('travel_lists').doc(listId).update({
+                            [`participants.${user.uid}`]: firebase.firestore.FieldValue.delete()
+                        });
+                    }
+                    exitList();
+                }
+            };
+
             const copyCodeToClipboard = () => {
                 navigator.clipboard.writeText(listId).then(() => {
                     setCopySuccess(true);
@@ -262,10 +280,15 @@
                 localStorage.removeItem('last_travel_list');
                 setView('home');
                 setListId('');
+                setShowSettings(false);
             };
+
+            // THEME HELPERS
+            const currentTheme = THEMES[listData.theme || 'emerald'];
 
             if (!user && isOnline) return <div className="flex items-center justify-center h-screen bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div></div>;
 
+            // --- HOME VIEW ---
             if (view === 'home') {
                 return (
                     <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center font-sans animate-fade-in pb-20">
@@ -303,7 +326,6 @@
                                 </div>
                             </div>
                         </div>
-
                         {history.length > 0 && (
                             <div className="w-full max-w-md">
                                 <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">SON BAKTIKLARIN</h3>
@@ -323,40 +345,117 @@
                                 </div>
                             </div>
                         )}
-
                         {error && <div className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100 text-sm max-w-md text-center font-semibold">{error}</div>}
                     </div>
                 );
             }
 
+            // --- LIST VIEW ---
             const completedCount = listData.items?.filter(i => i.completed).length || 0;
             const totalCount = listData.items?.length || 0;
             const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+            const isOwner = listData.createdBy === user.uid;
 
             return (
                 <div className="min-h-screen bg-slate-50 font-sans animate-fade-in pb-safe">
-                    <div className="bg-emerald-600 text-white pb-24 rounded-b-[2.5rem] shadow-lg sticky top-0 z-10 transition-all pt-safe">
+                    {/* SETTINGS MODAL */}
+                    {showSettings && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in overflow-y-auto max-h-[90vh]">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Icons.Settings size={24}/> Liste Ayarları</h2>
+                                    <button onClick={() => setShowSettings(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><Icons.X size={20}/></button>
+                                </div>
+                                
+                                <div className="space-y-6">
+                                    {/* İsim Değiştir */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Liste İsmi</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                                            <button onClick={updateListTitle} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Kaydet</button>
+                                        </div>
+                                    </div>
+
+                                    {/* Renk Seçimi */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tema Rengi</label>
+                                        <div className="flex gap-3 overflow-x-auto pb-2">
+                                            {Object.entries(THEMES).map(([key, val]) => (
+                                                <button 
+                                                    key={key} 
+                                                    onClick={() => changeTheme(key)}
+                                                    className={`w-10 h-10 rounded-full ${val.bg} border-2 ${listData.theme === key ? 'border-gray-800 scale-110' : 'border-transparent'} shadow-sm transition-all`}
+                                                    title={val.name}
+                                                ></button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Katılımcılar */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Katılımcılar</label>
+                                        <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+                                            {Object.entries(listData.participants || {}).map(([uid, p]) => (
+                                                <div key={uid} className="flex items-center justify-between p-2 bg-white rounded-md shadow-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        {p.photo ? <img src={p.photo} className="w-8 h-8 rounded-full"/> : <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs">{p.name?.[0]}</div>}
+                                                        <span className="text-sm font-medium">{p.name}</span>
+                                                        {uid === listData.createdBy && <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">Yönetici</span>}
+                                                    </div>
+                                                    {isOwner && uid !== user.uid && (
+                                                        <button onClick={() => removeParticipant(uid)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Icons.Trash2 size={16}/></button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <hr className="border-gray-200"/>
+
+                                    {/* Aksiyonlar */}
+                                    <div className="space-y-3">
+                                        {!isOwner && (
+                                            <button onClick={leaveList} className="w-full py-3 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2">
+                                                <Icons.LogOut size={18}/> Listeden Ayrıl
+                                            </button>
+                                        )}
+                                        {isOwner && (
+                                            <button onClick={deleteList} className="w-full py-3 rounded-xl bg-red-100 text-red-600 font-medium hover:bg-red-200 transition-colors flex items-center justify-center gap-2">
+                                                <Icons.Trash2 size={18}/> Listeyi Kalıcı Sil
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* HEADER */}
+                    <div className={`${currentTheme.bg} text-white pb-24 rounded-b-[2.5rem] shadow-lg sticky top-0 z-10 transition-colors duration-500 pt-safe`}>
                         <div className="max-w-3xl mx-auto p-6">
                             <div className="flex justify-between items-start mb-6">
-                                <button onClick={exitList} className="p-2 bg-emerald-700/50 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 text-sm">
-                                    <Icons.LogOut size={16} /> Listeden Çık
+                                <button onClick={exitList} className="p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-colors flex items-center gap-2 text-sm backdrop-blur-sm">
+                                    <Icons.ArrowRight size={16} className="rotate-180" /> Geri
                                 </button>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-emerald-200 text-xs mb-1">PAYLAŞ</span>
-                                    <button onClick={copyCodeToClipboard} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm transition-all border border-white/20">
+                                <div className="flex gap-2">
+                                    <button onClick={copyCodeToClipboard} className="flex items-center gap-2 bg-black/20 hover:bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm transition-all border border-white/20">
                                         <span className="font-mono text-lg font-bold tracking-wider">{listId}</span>
                                         {copySuccess ? <span className="text-xs">Kopyalandı!</span> : <Icons.Copy size={16} />}
+                                    </button>
+                                    <button onClick={() => setShowSettings(true)} className="p-2 bg-black/20 hover:bg-black/30 rounded-full backdrop-blur-sm border border-white/20">
+                                        <Icons.Settings size={20} />
                                     </button>
                                 </div>
                             </div>
                             <h1 className="text-3xl md:text-4xl font-bold mb-2">{listData.title}</h1>
-                            <div className="flex items-center justify-between text-emerald-100">
+                            <div className="flex items-center justify-between opacity-90">
                                 <div className="flex items-center gap-4">
                                     <span className="flex items-center gap-1"><Icons.MapPin size={16}/> {totalCount}</span>
                                     <span className="flex items-center gap-1"><Icons.CheckSquare size={16}/> {completedCount}</span>
                                 </div>
                                 {user && !user.isAnonymous && (
-                                    <div className="hidden sm:flex items-center gap-2 bg-emerald-700/30 px-3 py-1 rounded-full">
+                                    <div className="hidden sm:flex items-center gap-2 bg-black/20 px-3 py-1 rounded-full">
                                         <img src={user.photoURL} className="w-5 h-5 rounded-full" alt="User" />
                                         <span className="text-xs">{user.displayName}</span>
                                     </div>
@@ -366,44 +465,45 @@
                     </div>
 
                     <div className="max-w-3xl mx-auto px-4 -mt-16 pb-10">
-                        {/* İlerleme Çubuğu */}
-                        <div className="relative z-20 bg-white p-6 rounded-2xl shadow-xl mb-6 flex items-center gap-4 border-2 border-emerald-100">
+                        {/* Progress Bar */}
+                        <div className={`relative z-20 bg-white p-6 rounded-2xl shadow-xl mb-6 flex items-center gap-4 border-2 border-white`}>
                             <div className="flex-1">
                                 <div className="flex justify-between text-base font-bold mb-2 text-gray-700">
                                     <span>İlerleme Durumu</span>
-                                    <span className="text-emerald-600">% {progress}</span>
+                                    <span className={currentTheme.text}>% {progress}</span>
                                 </div>
                                 <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden border border-gray-100">
-                                    <div className="bg-gradient-to-r from-emerald-400 to-emerald-600 h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{ width: `${progress}%` }}></div>
+                                    <div className={`bg-gradient-to-r ${currentTheme.from} ${currentTheme.to} h-full rounded-full transition-all duration-500 ease-out`} style={{ width: `${progress}%` }}></div>
                                 </div>
                             </div>
                             <div className="hidden sm:block">
-                                <div className="h-14 w-14 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg border border-emerald-100">{completedCount}/{totalCount}</div>
+                                <div className={`h-14 w-14 ${currentTheme.light} rounded-full flex items-center justify-center ${currentTheme.text} font-bold text-lg`}>{completedCount}/{totalCount}</div>
                             </div>
                         </div>
 
-                        {/* Ekleme Kutusu */}
+                        {/* Input Area */}
                         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 sticky top-24 z-0">
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><Icons.Plus size={20} /></div>
+                                    <div className={`p-2 ${currentTheme.light} rounded-lg ${currentTheme.text}`}><Icons.Plus size={20} /></div>
                                     <input type="text" placeholder="Rota ekle..." className="flex-1 bg-transparent focus:outline-none text-lg placeholder-gray-400 text-gray-800" value={newItemText} onChange={(e) => setNewItemText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
                                 </div>
                                 <div className="flex items-center gap-3 pl-12">
                                     <Icons.MapPin size={16} className="text-gray-400" />
                                     <input type="text" placeholder="Konum (Opsiyonel)" className="flex-1 bg-transparent focus:outline-none text-sm placeholder-gray-400 text-gray-600" value={newItemLocation} onChange={(e) => setNewItemLocation(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
-                                    <button onClick={addItem} disabled={!newItemText.trim()} className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50"><Icons.ArrowRight size={20} /></button>
+                                    <button onClick={addItem} disabled={!newItemText.trim()} className={`${currentTheme.bg} hover:opacity-90 text-white p-2 rounded-lg transition-colors disabled:opacity-50`}><Icons.ArrowRight size={20} /></button>
                                 </div>
                             </div>
                         </div>
 
                         {error && <div className="mb-4 bg-red-100 text-red-700 p-3 rounded-lg text-sm">{error}</div>}
 
+                        {/* Items List */}
                         <div className="space-y-3">
                             {listData.items && listData.items.length > 0 ? (
                                 listData.items.map((item) => (
                                     <div key={item.id} className={`group bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3 transition-all ${item.completed ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'}`}>
-                                        <button onClick={() => toggleItem(item.id)} className={`mt-1 flex-shrink-0 transition-colors ${item.completed ? 'text-emerald-500' : 'text-gray-300 hover:text-emerald-500'}`}>
+                                        <button onClick={() => toggleItem(item.id)} className={`mt-1 flex-shrink-0 transition-colors ${item.completed ? currentTheme.text : 'text-gray-300 hover:' + currentTheme.text}`}>
                                             {item.completed ? <Icons.CheckSquare size={24} /> : <Icons.Square size={24} />}
                                         </button>
                                         <div className="flex-1 min-w-0">
@@ -442,9 +542,7 @@
         
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('SW Başarılı: ', reg.scope))
-                    .catch(err => console.log('SW Hatası: ', err));
+                navigator.serviceWorker.register('./service-worker.js');
             });
         }
     </script>
