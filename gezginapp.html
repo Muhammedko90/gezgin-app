@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gezgin</title>
+    
+    <!-- PWA Ayarları -->
+    <meta name="theme-color" content="#059669">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        /* iOS input zoom engelleme */
+        input { font-size: 16px !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 select-none">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTn2eXJbEiCnr-nwUlR7P2oDLX-KowCtQ",
+            authDomain: "gezginapp-70b69.firebaseapp.com",
+            projectId: "gezginapp-70b69",
+            storageBucket: "gezginapp-70b69.firebasestorage.app",
+            messagingSenderId: "120226629154",
+            appId: "1:120226629154:web:147621c900c5a9f0e06c7b"
+        };
+
+        // --- ICONS ---
+        const Icons = {
+            MapPin: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
+            CheckSquare: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+            Square: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>,
+            Plus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+            ArrowRight: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>,
+            LogOut: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+            Map: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="21"/><line x1="15" x2="15" y1="3" y2="21"/></svg>,
+            Copy: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+            Trash2: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            Google: (props) => <svg {...props} viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        };
+
+        function TravelPlanner() {
+            const [view, setView] = useState('home'); 
+            const [listId, setListId] = useState('');
+            const [listData, setListData] = useState({ title: '', items: [] });
+            const [joinCode, setJoinCode] = useState('');
+            const [newItemText, setNewItemText] = useState('');
+            const [newItemLocation, setNewItemLocation] = useState('');
+            const [error, setError] = useState('');
+            const [copySuccess, setCopySuccess] = useState(false);
+            const [user, setUser] = useState(null);
+            const [isOnline, setIsOnline] = useState(true);
+
+            useEffect(() => {
+                if (!firebase.apps.length) {
+                    try {
+                        firebase.initializeApp(firebaseConfig);
+                    } catch (e) {
+                        console.error("Firebase init hatası:", e);
+                        setError("Bağlantı ayarları hatalı.");
+                        setIsOnline(false);
+                    }
+                }
+
+                const unsubscribe = firebase.auth().onAuthStateChanged((currentUser) => {
+                    if (currentUser) {
+                        setUser(currentUser);
+                        setError('');
+                    } else {
+                        signInAnonymously();
+                    }
+                });
+
+                const lastList = localStorage.getItem('last_travel_list');
+                if (lastList && view === 'home') {
+                    setJoinCode(lastList);
+                }
+
+                return () => unsubscribe();
+            }, []);
+
+            useEffect(() => {
+                if (!listId || view !== 'list' || !user) return;
+
+                const db = firebase.firestore();
+                const docRef = db.collection('travel_lists').doc(listId);
+
+                const unsubscribe = docRef.onSnapshot((docSnap) => {
+                    if (docSnap.exists) {
+                        setListData(docSnap.data());
+                        setError('');
+                    } else {
+                        setError('Bu kodla bir liste bulunamadı.');
+                    }
+                }, (err) => {
+                    console.error(err);
+                    setError('Veriye erişilemedi. İnternet bağlantısı yok veya kod yanlış.');
+                });
+
+                return () => unsubscribe();
+            }, [listId, view, user]);
+
+            const signInAnonymously = () => {
+                firebase.auth().signInAnonymously().catch((err) => {
+                    console.error("Anonim giriş hatası:", err);
+                    setError("Giriş yapılamadı.");
+                });
+            };
+
+            const signInWithGoogle = () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                firebase.auth().signInWithPopup(provider)
+                    .then(() => setError(""))
+                    .catch((error) => {
+                        if (error.code === 'auth/operation-not-allowed' || error.message.includes('domain')) {
+                            setError("Domain izni hatası. GitHub kullanıyorsanız Firebase Console'dan domain ekleyin.");
+                        } else {
+                            setError("Giriş yapılamadı: " + error.message);
+                        }
+                    });
+            };
+
+            const logout = () => {
+                firebase.auth().signOut().then(() => {
+                    setView('home');
+                    setListId('');
+                });
+            };
+
+            const generateCode = () => {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let result = '';
+                for (let i = 0; i < 6; i++) {
+                    result += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return result;
+            };
+
+            const createList = async () => {
+                if (!newItemText.trim()) return;
+                const newCode = generateCode();
+                const newList = {
+                    title: newItemText,
+                    createdAt: new Date().toISOString(),
+                    createdBy: user ? user.uid : 'anonymous',
+                    items: []
+                };
+                try {
+                    await firebase.firestore().collection('travel_lists').doc(newCode).set(newList);
+                    setListId(newCode);
+                    localStorage.setItem('last_travel_list', newCode);
+                    setNewItemText('');
+                    setView('list');
+                } catch (e) {
+                    setError("Oluşturulamadı: " + e.message);
+                }
+            };
+
+            const joinList = () => {
+                if (!joinCode.trim()) return;
+                const code = joinCode.toUpperCase().trim();
+                setListId(code);
+                localStorage.setItem('last_travel_list', code);
+                setView('list');
+            };
+
+            const addItem = async () => {
+                if (!newItemText.trim()) return;
+                const newItem = {
+                    id: Date.now().toString(),
+                    text: newItemText,
+                    location: newItemLocation,
+                    completed: false,
+                    addedBy: user.uid,
+                    addedByName: user.displayName || 'Misafir',
+                    addedByPhoto: user.photoURL || null,
+                    addedAt: new Date().toISOString()
+                };
+                const updatedItems = [...(listData.items || []), newItem];
+                try {
+                    await firebase.firestore().collection('travel_lists').doc(listId).update({ items: updatedItems });
+                    setNewItemText('');
+                    setNewItemLocation('');
+                } catch (e) { setError("Ekleme hatası: " + e.message); }
+            };
+
+            const toggleItem = async (itemId) => {
+                const updatedItems = listData.items.map(item => item.id === itemId ? { ...item, completed: !item.completed } : item);
+                await firebase.firestore().collection('travel_lists').doc(listId).update({ items: updatedItems });
+            };
+
+            const deleteItem = async (itemId) => {
+                const updatedItems = listData.items.filter(item => item.id !== itemId);
+                await firebase.firestore().collection('travel_lists').doc(listId).update({ items: updatedItems });
+            };
+
+            const copyCodeToClipboard = () => {
+                navigator.clipboard.writeText(listId).then(() => {
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                });
+            };
+
+            if (!user && isOnline) return <div className="flex items-center justify-center h-screen bg-slate-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div></div>;
+
+            if (view === 'home') {
+                return (
+                    <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center font-sans animate-fade-in">
+                        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+                            <div className="bg-emerald-600 p-8 text-center relative">
+                                {user && !user.isAnonymous ? (
+                                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                                        <img src={user.photoURL} className="w-8 h-8 rounded-full border-2 border-white" alt="Profil" />
+                                        <button onClick={logout} className="text-xs text-white/80 hover:text-white underline">Çıkış</button>
+                                    </div>
+                                ) : (
+                                    <button onClick={signInWithGoogle} className="absolute top-4 right-4 bg-white text-gray-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm hover:bg-gray-100 transition-colors">
+                                        <Icons.Google className="w-3 h-3"/> Giriş Yap
+                                    </button>
+                                )}
+                                <Icons.Map className="w-16 h-16 text-white mx-auto mb-4 opacity-90" />
+                                <h1 className="text-3xl font-bold text-white mb-2">Gezgin</h1>
+                                <p className="text-emerald-100">{user && !user.isAnonymous ? `Merhaba, ${user.displayName.split(' ')[0]}!` : 'Ortak Seyahat Planlayıcı'}</p>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2"><Icons.Plus className="w-5 h-5 text-emerald-600" /> Yeni Liste Oluştur</h2>
+                                    <div className="flex gap-2">
+                                        <input type="text" placeholder="Örn: İtalya" className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none" value={newItemText} onChange={(e) => setNewItemText(e.target.value)} />
+                                        <button onClick={createList} disabled={!newItemText.trim()} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Oluştur</button>
+                                    </div>
+                                </div>
+                                <div className="relative"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div><div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">veya</span></div></div>
+                                <div className="space-y-4">
+                                    <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2"><Icons.Users className="w-5 h-5 text-blue-600" /> Listeye Katıl</h2>
+                                    <div className="flex gap-2">
+                                        <input type="text" placeholder="KOD" className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                                        <button onClick={joinList} disabled={!joinCode.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-colors">Katıl</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {error && <div className="mt-4 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100 text-sm max-w-md text-center">{error}</div>}
+                    </div>
+                );
+            }
+
+            const completedCount = listData.items?.filter(i => i.completed).length || 0;
+            const totalCount = listData.items?.length || 0;
+            const progress = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans animate-fade-in pb-safe">
+                    <div className="bg-emerald-600 text-white pb-24 rounded-b-[2.5rem] shadow-lg sticky top-0 z-10 transition-all pt-safe">
+                        <div className="max-w-3xl mx-auto p-6">
+                            <div className="flex justify-between items-start mb-6">
+                                <button onClick={() => setView('home')} className="p-2 bg-emerald-700/50 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                                    <Icons.LogOut size={16} /> Çıkış
+                                </button>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-emerald-200 text-xs mb-1">PAYLAŞ</span>
+                                    <button onClick={copyCodeToClipboard} className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm transition-all border border-white/20">
+                                        <span className="font-mono text-lg font-bold tracking-wider">{listId}</span>
+                                        {copySuccess ? <span className="text-xs">Kopyalandı!</span> : <Icons.Copy size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <h1 className="text-3xl md:text-4xl font-bold mb-2">{listData.title}</h1>
+                            <div className="flex items-center justify-between text-emerald-100">
+                                <div className="flex items-center gap-4">
+                                    <span className="flex items-center gap-1"><Icons.MapPin size={16}/> {totalCount}</span>
+                                    <span className="flex items-center gap-1"><Icons.CheckSquare size={16}/> {completedCount}</span>
+                                </div>
+                                {user && !user.isAnonymous && (
+                                    <div className="hidden sm:flex items-center gap-2 bg-emerald-700/30 px-3 py-1 rounded-full">
+                                        <img src={user.photoURL} className="w-5 h-5 rounded-full" alt="User" />
+                                        <span className="text-xs">{user.displayName}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-3xl mx-auto px-4 -mt-16 pb-10">
+                        <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 flex items-center gap-4">
+                            <div className="flex-1">
+                                <div className="flex justify-between text-sm font-medium mb-2 text-gray-600">
+                                    <span>İlerleme</span>
+                                    <span>%{progress}</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
+                                </div>
+                            </div>
+                            <div className="hidden sm:block">
+                                <div className="h-12 w-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold">{completedCount}/{totalCount}</div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 sticky top-24 z-0">
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600"><Icons.Plus size={20} /></div>
+                                    <input type="text" placeholder="Rota ekle..." className="flex-1 bg-transparent focus:outline-none text-lg placeholder-gray-400 text-gray-800" value={newItemText} onChange={(e) => setNewItemText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
+                                </div>
+                                <div className="flex items-center gap-3 pl-12">
+                                    <Icons.MapPin size={16} className="text-gray-400" />
+                                    <input type="text" placeholder="Konum (Opsiyonel)" className="flex-1 bg-transparent focus:outline-none text-sm placeholder-gray-400 text-gray-600" value={newItemLocation} onChange={(e) => setNewItemLocation(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addItem()} />
+                                    <button onClick={addItem} disabled={!newItemText.trim()} className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50"><Icons.ArrowRight size={20} /></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {error && <div className="mb-4 bg-red-100 text-red-700 p-3 rounded-lg text-sm">{error}</div>}
+
+                        <div className="space-y-3">
+                            {listData.items && listData.items.length > 0 ? (
+                                listData.items.map((item) => (
+                                    <div key={item.id} className={`group bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3 transition-all ${item.completed ? 'opacity-60 bg-gray-50' : 'hover:shadow-md'}`}>
+                                        <button onClick={() => toggleItem(item.id)} className={`mt-1 flex-shrink-0 transition-colors ${item.completed ? 'text-emerald-500' : 'text-gray-300 hover:text-emerald-500'}`}>
+                                            {item.completed ? <Icons.CheckSquare size={24} /> : <Icons.Square size={24} />}
+                                        </button>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className={`text-lg font-medium truncate ${item.completed ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{item.text}</h3>
+                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                                                {item.location && (
+                                                    <a href={item.location.startsWith('http') ? item.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-500 hover:text-blue-700 hover:underline">
+                                                        <Icons.MapPin size={14} /> <span className="truncate max-w-[150px]">{item.location.startsWith('http') ? 'Harita' : item.location}</span>
+                                                    </a>
+                                                )}
+                                                {item.addedByName && item.addedByName !== 'Misafir' && (
+                                                    <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                        {item.addedByPhoto && <img src={item.addedByPhoto} className="w-3 h-3 rounded-full" alt="" />}
+                                                        {item.addedByName.split(' ')[0]}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all" title="Sil"><Icons.Trash2 size={18} /></button>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 text-gray-400">
+                                    <Icons.Map className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                                    <p>Listeniz boş.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TravelPlanner />);
+        
+        // --- SERVICE WORKER KAYDI ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('SW Başarılı: ', reg.scope))
+                    .catch(err => console.log('SW Hatası: ', err));
+            });
+        }
+    </script>
+</body>
+</html>
